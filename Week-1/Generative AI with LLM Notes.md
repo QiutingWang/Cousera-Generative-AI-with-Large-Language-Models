@@ -1,0 +1,71 @@
+# Generative AI with LLM Week1
+
+- transformer
+- self-attention
+- vision transformer(ViT)
+- collection of fundamental basic models:
+  - BLOOM
+  - GPT
+  - LLaMa
+  - Bert
+  - PlaM
+  - FLAN-T5
+- Prompts and Completion:
+  - Prompt(human-written instruction) with context window is given to LLM to complete the task with generated text.
+- Application: text summarization, entity extraction, translation
+- text generation before Transformer
+  - RNNs, CNNs
+  - challenges: language is complex. One word has multiple meanings 一词多义、指代不明
+- 🌟Transformer Architecture:
+  - input as *tokens* passed into embedding layers, then put into encoder & decoder
+    - tokenization:
+      - <u>token IDs</u> matching with complete *words*
+      - input token is processed <u>in parallel</u>
+    - embedding layer:
+      - trainable vector embedding space, high dimensional space
+      - each token is represented as vector occupying an unique location
+      - tokenID is matched with a <u>multi-dimensional vector</u>
+      - in original paper, the size of vector=512
+    - positional encoding
+      - preserve the <u>word order position information</u>
+  - self-attention
+    - Role:
+      - scan the relationship between <u>one world to all other words</u> with different attention weights
+      - looks for high correlation between words, approving models' ability to encode language
+    - Composition:
+      - Encoder
+      - Decoder
+      - multi-headed self-attention in Transformer placed *in parallel*
+        - the numbers of heads included in attention layer varied from *12~100* in different models
+        - the weights of each head are <u>randomly initialized</u>, given enough time and data to **learn different aspects of language**
+      - the output is processed through a <u>fully-connected feed-forward network</u>
+        - the output is a logits proportion vector to the probability score for each token in dictionary.
+      - use *residual connections and layer normalization* to prevent overfitting
+    - softmax layer: <u>normalized a probability score</u> for each word
+      - one single token which is the <u>most likely predicted token</u> has *highest score* among the rest
+      - passing the output token <u>back to the input of decoder</u> to generate next token with highest score
+- Text generation with Transformers:
+  - scale efficiency, parallel process, attention to input's meaning
+- LLM Classification by Architecture:
+  - Encoder only model:
+    - the output sequence and input sequence have the same length
+    - use less commonly, usually used for classification tasks: sentiment analysis
+    - BERT
+  - Encoder-Decoder model:
+    - perform well on Seq2Seq task, such as translation, generation task
+    - input and output sequence can be *different length*
+    - BART, T5
+  - Decoder only model:
+    - most commonly used today, can be used almost any tasks
+    - BLOOM, LLaMa, Jurassic
+- Prompt and prompt engineering
+  - prompt engineering: we need to *revise the prompts* several times to improve model performance.
+    - **in-context learning**(ICL): <u>include example</u> of task inside the prompt
+      - zero-shot: LLM with relative *smaller size* struggle in this prompt technique, improved by one-sot or few-shot.
+      - one-shot: give one example of whole completed task
+      - few-shot
+    - context window almost has <u>input size limitation</u>(few thousand words)
+    - if the model still cannot perform well even with few-shot prompting, we should *fine-tune* the model, which uses new data to perform additional training.
+    - Scale Issues:
+      - model with more parameters is capable to capture more understanding of language. Larger models are good at zero-shot prompting.
+      - small LLM are only good at performing small number of tasks.
