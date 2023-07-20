@@ -49,15 +49,16 @@
 - LLM Classification by Architecture:
   - Encoder only model:
     - the output sequence and input sequence have the same length
-    - use less commonly, usually used for classification tasks: sentiment analysis
-    - BERT
+    - use less commonly, usually used for classification tasks: sentiment analysis, word classification, named entity recognition
+    - BERT, RoBerta
   - Encoder-Decoder model:
-    - perform well on Seq2Seq task, such as translation, generation task
+    - perform well on Seq2Seq task, such as translation, generation task, text summarization, question answering
     - input and output sequence can be *different length*
     - BART, T5
   - Decoder only model:
     - most commonly used today, can be used almost any tasks
-    - BLOOM, LLaMa, Jurassic
+    - usually used for text generation 
+    - BLOOM, LLaMa, Jurassic, GPT
 - Prompt and prompt engineering
   - prompt engineering: we need to *revise the prompts* several times to improve model performance.
     - **in-context learning**(ICL): <u>include example</u> of task inside the prompt
@@ -69,3 +70,98 @@
     - Scale Issues:
       - model with more parameters is capable to capture more understanding of language. Larger models are good at zero-shot prompting.
       - small LLM are only good at performing small number of tasks.
+- Generative Configuration
+  - `max new tokens`: maximum number of tokens of output the model generate
+    - the output is operated with `greedy sampling`, that is, the token with <u>highest probability</u> is selected.
+      - this method works well for *short generation*
+    - another way called `random(weighted) sampling`, choosing an output word randomly using probability distribution to weight selection.
+      - it reduces the likelihood for <u>choosing repeat words</u>.
+  - `sample top K`: after using random weighted using probability, select an output from topK results.
+  - `sample top P`: select an output using random-weighted method with <u>top-rank consecutive</u> results with cumulative probability $<p$
+  - `temperature`:
+    - softmax function parameter, affecting shape of probability distribution
+    - higher the temperature($>1$), higher the randomness, less-likely tokens show up, *flatter or broader* distribution
+    - lower temperature($< 1$), have a <u>strongly peaked probability distribution</u>, which is *concentrated* in a small number of words.
+    - if we set temperature$=1$, we leave the softmax as *default*, <u>unchanged</u> probability distribution will be used.
+- Generative AI Project Lifecycle
+  - Scope: main tasks need to achieve
+  - Select: choose an already existed model or pre-trained on my own
+  - Adapt and Align: prompt engineering, fine-tuning, align with human feedback, evaluate
+  - Application integration: optimize and deployment
+- Pre-train LLM
+  - importance of pre-train
+    - primarily the input data almost unstructured textual data, from different sources
+    - the model initializes <u>the structure or pattern</u> present in language, to complete training objective
+    - we need to process the raw data to <u>improve data quality, address bias, and remove harmful content</u>.
+      - Therefore, only *1~3% of original tokens* are used in pre-training.
+    - during pre-training, model tries to minimize loss of objective, encoder generates embedding representation for each token
+    - it requires lots of GPU
+  - Autoencoding model(Encoder-only model):
+    - pre-trained with *Masked Language Modeling(MLM)*
+      - tokens of input sequence are randomly masked
+      - training objective: predict the masked token to reconstruct text(`denoising`)
+    - use bidirectional representation of input sequence
+      - model understands *full context* of a token, not the previous words only.
+  - Autoregressive model(decoder-only model):
+    - pre-trained with *Causal Language Modeling(CLM)*
+      - training objective: predict next token based on the previous series of tokens, also called `full language modeling`
+      - the model has no knowledge of the end of the sentence知前不知尾，*unidirectional*.
+      - it builds up a statistical representation of language
+  - Sequence to Sequence Model(encoder-decoder):
+    - Span corruption:
+      - mask *random sequences* of input tokens
+      - replaced the masked tokens by the unique <u>sentinel token</u>($x$)
+        - sentinel token: added to vocabulary, but don't correspond to any actual word with input text.
+      - decoder objective: different from model to model
+        - For T5: reconstruct the mask token sequence autoregressively
+      - the sentinel token is followed by predicted tokens
+- Computational Challenges of Training LLM: running out of memory
+  - Assume we use GPU RAM to train 1B-parameters:
+    - 1 parameter=4 bytes(32-bit float)
+    - 2 adam optimizer+8 bytes per parameter
+    - Gradients+4 bytes per parameter
+    - activation by temporary memory+8 bytes per parameter
+    - in total, we need 80GB memory to train model
+  - Solution to reduce memory required:
+    - **Quantization**: 32-bit float(`FP32`)→16-bit float(`FP16`) | 8-bit integer(`INT8`) a <u>lower precision</u> space with *scaling factors*
+      - range of FP32: $(3e^{-38},3e^{38})$, by default, model parameters are stored using this form.
+        - sign: 1 bit; exponent: 8 bits; fraction: 23 bits
+        - requires 4 bytes memory
+      - FP16: range $(-65504, 65504)$
+        - sign: 1 bit; exponent: 5 bits; fraction: 10 bits
+        - requires 2 bytes memory
+        - in total, we need 40GB memory to train model
+        - drawback: it doesn't fit for integer calculation
+      - optimize FP16 called `BFLOAT16`, also called `truncated FP32`
+        - it carries full dynamic range of FP32, but only uses 16-bits
+        - a good choice for deep learning models training.
+        - requires 2 bytes memory
+      - INT8:
+        - range to represent number $\in (-128, 127)$
+        - sign: 1 bit; fraction: 7 bits
+        - requires 1 bytes memory to store 1 value
+        - in total, we need 20GB memory to train model
+    - if we want to run model(originally owns 1B parameters) on *single* GPU, plz <u>use 16-bit or 8-bit quantization</u>. 80GB is maximum memory of NVIDIA A100 GPU.
+    - Hence, in most cases, we need to separate model across *multiple GPUs* to train in parallel.
+- Efficient Multi-GPU Computation Strategies: Distributed Compute
+  - **Distributed Data Parallel(DDP)**
+    - distribute different branches to data into different GPU in parallel
+    - copy models(parameter, gradient, optimizer) to each GPU
+      - if model is too large, model copy is difficult to realize, solution: `model sharding`模型分片
+        - Application: *Fully Sharded Data Parallel(FSDP)*
+          - PyTorch Tutorial: <https://pytorch.org/blog/introducing-pytorch-fully-sharded-data-parallel-api/>
+          - HuggingFace:<https://huggingface.co/docs/accelerate/usage_guides/fsdp>
+          - *ZeRO*: subset of parameters of each GPU across GPUs
+            - 3 stages: 
+              1. $P_{optimization}$: reduce memory footprint by 4 times
+              2. $P_{optimization+gradient}$: reduce memory footprint by 8 times
+              3. $P_{optimization+gradient+parameters}$
+          - it requires to <u>collect weights</u> before forward pass from all GPUs, and collect weights again after forward before backward pass. Finally, it is unsharded data.
+          - support *offloading to GPU* is needed, to further reduce GPU memory utilization.
+          - trade off performance and GPU utilization by `sharding factor` sets specific number of GPUs, to <u>configure sharding level</u>
+            - more GPUs, communication volume between GPUs↑, slowing down the computation
+            - levels can be: fully replication, fully sharding, hybrid sharding
+          - we can use FSDP for <u>both small and large size</u> of LLM, the performance is better than simple DDP.
+    - synchronization gradients combine the results, then updates the model on each GPU
+- Scaling Laws and Compute-Optimal Models
+- Pre-train for Domain
