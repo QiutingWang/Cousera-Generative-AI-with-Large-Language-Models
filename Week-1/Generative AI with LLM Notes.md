@@ -164,4 +164,23 @@
           - we can use FSDP for <u>both small and large size</u> of LLM, the performance is better than simple DDP.
     - synchronization gradients combine the results, then updates the model on each GPU
 - Scaling Laws and Compute-Optimal Models
-- Pre-train for Domain
+  - goal of pre-training: maximize model performance, minimize loss when predicting tokens
+  - scaling choice:
+    - dataset size, number of tokens↑, performance↑
+    - model size, number of parameters↑,performance↑
+  - constraint: computation budget: GPU hardware, training time(project timeline), financial budget
+  - compute and quantifies required resources:
+    - 1 petaflop/s-day:
+      - number of floating operations performed at rate of 1 petaFLOP per second one day
+      - 1 quarillion floating point operations per second
+      - equals to <u>8 NVDA V100(or 2 NVDA A100 GPU)</u> chips running at full efficiency at 24 hrs
+  - Chinchilla compute optimal models:
+    - intuition: find an optimal number of parameters and training data for a given compute budget
+    - conclusions:
+      - very large model may be <u>over-parameterized and under-trained</u>
+      - *smaller model* trained with *more data* can perform as well as larger models.
+      - compute optimal training dataset size=**20X** number of parameters
+      - Hence, sometime larger LLM(scaling effect) may not be a better choice.(eg: 50B Bloomberg GPT works well, but without enough training data in financial area)
+- Pre-train for Domain Adaptation
+  - in some cases, pre-train our own model from scratch is necessary for a better performance, when targeting domain with <u>uncommonly used vocabulary or language and in an idiosyncratic way</u>.
+    - eg: medical, legal area, abbreviation or shorthand
