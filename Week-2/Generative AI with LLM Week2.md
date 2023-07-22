@@ -1,0 +1,32 @@
+# Generative AI with LLM Week2
+
+- Limitation of In-context learning(ICL)
+  - may not work well for smaller size LLM
+  - examples take up space in context window, reducing the remaining room we have to include other information
+- Solution: fine-tuning, a *supervise learning* process with labeled examples, updates weights of LLM.
+  - labeled examples formed as `prompt-completion pairs` includes a task-specific *instruction* to LLM.
+  - Instruction fine-tuning: *full fine-tuning* that updates all parameters
+    - requires memory, compute budget to store all updated gradients and optimizers
+    - we should use memory optimization and parallel computing strategies
+    - Fine-Tuning Procedures: results in a new version of base model(the pre-trained LLM), called **instruct LLM**
+      - use *prompt template libraries* to change existing unstructured dataset --> **instruction prompt dataset**
+        - prompt instruction libraries: {{review_body}}
+      - divide standard dataset into training, validation, test splits
+      - pass them into Pre-trained LLM, generating completions
+        - the output of LLM is a *probability distribution* across tokens
+      - compare LLM completions with response specified in training data, then use *cross-entropy* as loss function
+      - use the calculated loss to <u>update model weights</u> in back-propagation, improving model performance progressively.
+      - use `validation_accuracy` from *validation dataset* to measure LLM performance.
+      - after finished fine-tuning, use *test dataset* to evaluate final performance, gaining `test_accuracy`
+- Fine-tuning on a <u>single</u> task:
+  - good results can achieved only few examples(500~1000 is enough)
+  - potential downside: catastrophic forgetting
+    - reason: full fine-tuning increase model performance on a specific task, by updating original weights of LLM. However, it <u>degrade performance of other tasks</u>. Forgets previously learned information, as it learns new information
+    - Definition: a common problem in DL
+    - solutions:
+      - check whether the catastrophic forgetting actually impact our use case.
+      - if we want model to keep multitask generalized capabilities, we can perform <u>fine-tuning on multi-tasks at the same time</u>.
+      - OR consider PEFT: train only a <u>small number of task-specific adapter layers and parameters</u>. Therefore, most of pre-trained LLM weights are unchanged.
+- Multitask instruction fine-tuning:
+  - datasets contain *examples* instructing model to complete various kinds of tasks.
+  - drawback: it requires lots of data
