@@ -92,6 +92,7 @@
   - significantly reduce the number of trainable parameters
   - we can train different rank decomposition matrices for *different tasks*
   - can be evaluated by ROUGE: Full fine-tune >≈ LoRA fine-tune >> Baseline FLAN-T5
+- QLoRA: combine quantization and LoRA together
 - Soft-prompt
   - prompt tuning != prompt engineering
     - drawback of prompt engineering:
