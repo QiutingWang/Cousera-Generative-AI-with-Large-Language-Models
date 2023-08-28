@@ -1,0 +1,64 @@
+# Generative AI with LLM Week3
+
+- Why we need align model with human values:
+  - model can provide toxic and aggressive language, dangerous information
+  - misleading and incorrect answers will be provided
+  - help people complete criminal behavior
+  - in summary: we need Helpful, Honest, and Harmless(HHH) answers.
+- RLHF Components:
+  - RL:
+    - an agent learns to make decisions by taking actions in an environment
+    - goal: maximize reward received for actions
+    - totally, the important elements are:
+      - agent(model, the RL policy), environment, action, reward/penalize, state
+      - playout: the series of actions and corresponding states
+      - rollout: the sequence of actions
+  - For RLHF:
+    - Agent: Instruct LLM
+    - Object: generate aligned text
+    - Environment: the context window
+    - State: current context contained in the context window
+    - Action(also called Q-value): text generation
+    - Reward: assigned based on how closely the completions align with human preferences
+      - we can use an additional model, the `reward model`
+        - to classify the output and evaluate the degree of alignment
+        - to achieve the *encoding* the preferences that have been learnt from human feedback
+        - to help model update its weights
+- How RLHF obtain human feedback?
+  - the language model we choose should have ability to deal specific tasks
+  - collect human feedback:
+    - define model alignment criterion
+    - obtain the generated prompt-response sets' human feedback via <u>labeler workforce</u>
+      - eg: by ranking the answers
+    - then iterations for many times, *building up a dataset* used to train the reward model, which finally carries out this work without human intervention.
+    - the quality of obtained human feedback depends on <u>the clarity of instructions</u>.
+      - the sample instructions are written to *guide human labelers*. 
+        - The more detailed, the higher likelihood to have a high quality.
+        - eg: what to do if they identify a tie, when to give the special label instead of giving prompt a ranking order
+  - convert labeled data to a *readable format* for training
+    - ranking-->pairwise(prompt-completion) data for reward model
+      - Given N alternative generated completions per prompt, we get N pair combinations
+      - for each pair, we assign the preferred response as 1, another assigned as 0
+      - reorder the prompt pairs into preferred option comes first, denote completion as {$y_j,y_k$}
+        - Namely, $y_j$ is the preferred answer
+- Reward Model
+  - functions: to predict preferred completion from {$y_j,y_k$} for prompt $x$
+  - it is also usually a language model
+  - used to minimize the loss function we set $log(\sigma(r_j-r_k))$
+  - use as a binary classifier providing reward value
+    - higher value represents, more align response
+    - after we apply the <u>activation function</u> to the loss function-->we get probabilities
+  - pass the reward value to RL algorithm to update LLM weights-->called `RL updated LLM`
+  - iteration after the model passes a threshold value OR a pre-defined maximum number of steps, with an increasing reward values
+    - types of RL algorithms we can choose:
+      - PPO(Open AI used it)
+      - Q-learning
+      - QDN
+      - Policy Gradient Method
+      - Actor-Critic Method
+      - NLPO
+      - TRPO
+    - Resource:
+      - <https://github.com/huggingface/trl>
+      - <https://github.com/allenai/RL4LMs>
+- Proximal Policy Optimization
